@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "projects": {
+    "client": "apps/client",
+    "gateway-server": "apps/gateway-server",
+    "ai-cli": "libs/ai-cli"
+  }
+}

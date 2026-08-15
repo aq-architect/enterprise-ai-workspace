@@ -1,0 +1,24 @@
+{
+  "name": "gateway-server",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/gateway-server/src",
+  "tags": ["scope:gateway", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/gateway-server"],
+      "options": {
+        "command": "nest build",
+        "cwd": "apps/gateway-server"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nest start --watch",
+        "cwd": "apps/gateway-server"
+      }
+    }
+  }
+}

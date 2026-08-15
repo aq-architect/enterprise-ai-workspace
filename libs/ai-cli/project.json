@@ -1,0 +1,17 @@
+{
+  "name": "ai-cli",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/ai-cli/src",
+  "tags": ["scope:shared", "type:cli"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/libs/ai-cli"],
+      "options": {
+        "command": "tsc -p libs/ai-cli/tsconfig.lib.json",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  }
+}

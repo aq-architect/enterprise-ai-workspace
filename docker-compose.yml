@@ -1,0 +1,119 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: enterprise-ai-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - enterprise-ai
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: enterprise-ai-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - enterprise-ai
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: enterprise-ai-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - enterprise-ai
+
+  agent-core:
+    build:
+      context: ./agent-core
+      dockerfile: Dockerfile
+    container_name: enterprise-ai-agent-core
+    restart: unless-stopped
+    env_file:
+      - ./agent-core/.env
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    networks:
+      - enterprise-ai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  gateway-server:
+    build:
+      context: .
+      dockerfile: apps/gateway-server/Dockerfile
+    container_name: enterprise-ai-gateway
+    restart: unless-stopped
+    depends_on:
+      agent-core:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      kafka:
+        condition: service_started
+    env_file:
+      - ./apps/gateway-server/.env
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      AI_CORE_URL: http://agent-core:8000/api/v1/agent/chat
+      MONGO_URI: mongodb://mongo:27017/enterprise-ai
+      KAFKA_BROKERS: kafka:29092
+    ports:
+      - "3000:3000"
+    networks:
+      - enterprise-ai
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/docs-json"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    container_name: enterprise-ai-client
+    restart: unless-stopped
+    depends_on:
+      gateway-server:
+        condition: service_healthy
+    ports:
+      - "4200:80"
+    networks:
+      - enterprise-ai
+
+networks:
+  enterprise-ai:
+    driver: bridge
+
+volumes:
+  mongo_data:

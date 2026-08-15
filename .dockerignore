@@ -1,0 +1,21 @@
+# Root build context ignore list for Docker
+.git
+.github
+.nx
+.vscode
+.idea
+**/.venv
+**/node_modules
+**/dist
+**/.angular
+**/__pycache__
+**/*.pyc
+**/.env
+!**/.env.example
+README.md
+tmp
+coverage
+*.log
+agent-core/.venv
+apps/client/node_modules
+apps/gateway-server/node_modules
