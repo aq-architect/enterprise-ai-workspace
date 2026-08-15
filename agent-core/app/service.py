@@ -8,28 +8,28 @@ from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from pinecone import Pinecone
 
-from app.config import Settings, get_settings
+from app.config import settings
 
 
 class RAGService:
-    def __init__(self, settings: Settings | None = None) -> None:
-        self.settings = settings or get_settings()
+    def __init__(self) -> None:
+        self.settings = settings
         self._query_engine: BaseQueryEngine | None = None
 
     def _configure_llama_index(self) -> None:
         LlamaSettings.llm = OpenAI(
-            model=self.settings.llama_index_llm_model,
-            api_key=self.settings.openai_api_key,
+            model="gpt-4o-mini",
+            api_key=self.settings.OPENAI_API_KEY,
         )
         LlamaSettings.embed_model = OpenAIEmbedding(
-            model=self.settings.llama_index_embed_model,
-            api_key=self.settings.openai_api_key,
+            model="text-embedding-3-small",
+            api_key=self.settings.OPENAI_API_KEY,
         )
 
     def _build_query_engine(self) -> BaseQueryEngine:
         self._configure_llama_index()
-        pinecone_client = Pinecone(api_key=self.settings.pinecone_api_key)
-        index = pinecone_client.Index(self.settings.pinecone_index_name)
+        pinecone_client = Pinecone(api_key=self.settings.PINECONE_API_KEY)
+        index = pinecone_client.Index("agent-core")
         vector_store = PineconeVectorStore(pinecone_index=index)
         vector_index = VectorStoreIndex.from_vector_store(vector_store)
         return vector_index.as_query_engine()
