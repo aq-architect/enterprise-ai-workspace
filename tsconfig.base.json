@@ -13,10 +13,9 @@
     "lib": ["ES2021", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
     "paths": {
-      "@enterprise-ai/ai-cli": ["libs/ai-cli/src/index.ts"],
-      "@enterprise-ai/ai-cli/*": ["libs/ai-cli/src/*"]
+      "@enterprise-ai/ai-cli": ["./libs/ai-cli/src/index.ts"],
+      "@enterprise-ai/ai-cli/*": ["./libs/ai-cli/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist", "agent-core"]

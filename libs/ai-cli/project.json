@@ -9,7 +9,11 @@
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/libs/ai-cli"],
       "options": {
-        "command": "tsc -p libs/ai-cli/tsconfig.lib.json",
+        "commands": [
+          "tsc -p libs/ai-cli/tsconfig.lib.json",
+          "node -e \"require('fs').copyFileSync('libs/ai-cli/package.json','dist/libs/ai-cli/package.json'); require('fs').copyFileSync('libs/ai-cli/README.md','dist/libs/ai-cli/README.md');\""
+        ],
+        "parallel": false,
         "cwd": "{workspaceRoot}"
       }
     }

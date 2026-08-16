@@ -11,6 +11,7 @@
     "build:client": "nx build client",
     "build:gateway": "nx build gateway-server",
     "build:ai-cli": "nx build ai-cli",
+    "publish:ai-cli": "nx build ai-cli && npm publish ./dist/libs/ai-cli",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",

@@ -1,0 +1,38 @@
+{
+  "name": "@aq-architect/ai-cli",
+  "version": "1.0.0",
+  "description": "Developer CLI for the Enterprise AI Workspace",
+  "license": "MIT",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "bin": {
+    "ai-cli": "./bin/ai-cli.js"
+  },
+  "files": [
+    "**/*"
+  ],
+  "scripts": {
+    "prepublishOnly": "node -e \"require('fs').accessSync('./index.js')\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "enterprise-ai",
+    "langgraph",
+    "gateway"
+  ],
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aq-architect/enterprise-ai-workspace.git",
+    "directory": "libs/ai-cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
