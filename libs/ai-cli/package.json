@@ -1,5 +1,5 @@
 {
-  "name": "@aq-architect/ai-cli",
+  "name": "ai-cli-agent",
   "version": "1.0.0",
   "description": "Developer CLI for the Enterprise AI Workspace",
   "license": "MIT",

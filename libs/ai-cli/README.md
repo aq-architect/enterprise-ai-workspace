@@ -1,11 +1,11 @@
-# `@aq-architect/ai-cli`
+# `ai-cli-agent`
 
 Developer CLI for the Enterprise AI Workspace.
 
 ## Install
 
 ```bash
-npm install -g @aq-architect/ai-cli
+npm install -g ai-cli-agent
 ```
 
 ## Usage
@@ -19,7 +19,7 @@ ai-cli --help
 ## Library usage
 
 ```ts
-import { createAiCli, runAiCli } from '@aq-architect/ai-cli';
+import { createAiCli, runAiCli } from 'ai-cli-agent';
 
 runAiCli();
 ```
