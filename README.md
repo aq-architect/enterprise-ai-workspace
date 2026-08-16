@@ -108,6 +108,33 @@ Host the Angular UI + serverless Node gateway + serverless Python Gemini agent o
 
 5. Click **Deploy**
 
+### Troubleshoot `404 NOT_FOUND` on `/api/health`
+
+Vercel was only publishing the Angular static export and skipping serverless functions. This repo’s `vercel.json` now **explicitly builds**:
+
+- `@vercel/static-build` → Angular UI  
+- `@vercel/node` → `api/health.ts`, `api/gateway.ts`  
+- `@vercel/python` → `api/agent.py`  
+
+After pulling these changes:
+
+1. Commit + push `api/`, `vercel.json`, and `package.json` (`vercel-build` script)
+2. In Vercel → **Deployments** → **Redeploy** (or push to `main`)
+3. Confirm Project **Root Directory** is the repo root (not `apps/client`)
+4. Open `https://YOUR_DOMAIN/api/health` again
+
+### Troubleshoot `401` on `/api/v1/gateway/dispatch`
+
+Your URL looks like a **git preview** deployment (`…-git-main-….vercel.app`). Vercel often enables **Deployment Protection**, which returns **401** to anonymous API calls (the Angular app then shows “Gateway communication failure”).
+
+Fix:
+
+1. Vercel → your project → **Settings** → **Deployment Protection**
+2. Set protection to **None** / disable for Production (and Preview if you use preview URLs)
+3. Prefer the **Production** domain (`your-project.vercel.app`), not only the `git-main` URL
+4. Confirm `GEMINI_API_KEY` is set under **Settings → Environment Variables** (Production)
+5. Smoke-test: open `https://YOUR_DOMAIN/api/health` — should return `{ "status": "ok", ... }` without login
+
 ### 4. Local serverless preview
 
 ```powershell

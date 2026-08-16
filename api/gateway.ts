@@ -40,18 +40,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const aiCoreUrl = resolveAgentUrl(req);
+    const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
     const response = await fetch(aiCoreUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(bypass ? { 'x-vercel-protection-bypass': bypass } : {}),
+      },
       body: JSON.stringify({ prompt }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401) {
+      return res.status(401).json({
+        source: '@aq-architect/serverless-gateway',
+        gatewayStatus: 'error',
+        error:
+          'Vercel returned 401 (Deployment Protection). Disable Protection in Vercel → Project → Settings → Deployment Protection, or open the Production URL while logged out to confirm APIs are public.',
+        data,
+      });
+    }
+
     if (!response.ok) {
       return res.status(response.status).json({
         source: '@aq-architect/serverless-gateway',
         gatewayStatus: 'error',
-        error: data?.detail || data?.error || 'Agent core failure',
+        error: (data as { detail?: string; error?: string })?.detail
+          || (data as { error?: string })?.error
+          || 'Agent core failure',
         data,
       });
     }

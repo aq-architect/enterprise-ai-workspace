@@ -9,6 +9,7 @@
     "start:gateway": "nx serve gateway-server",
     "build": "nx run-many -t build",
     "build:client": "nx build client",
+    "vercel-build": "npm run build:client",
     "build:gateway": "nx build gateway-server",
     "build:ai-cli": "nx build ai-cli",
     "publish:ai-cli": "nx build ai-cli && npm publish ./dist/libs/ai-cli",

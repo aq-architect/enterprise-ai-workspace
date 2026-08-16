@@ -75,7 +75,15 @@ export class AgentTerminalComponent {
         this.loading = false;
       },
       error: (err) => {
-        this.logs.push({ sender: 'system', text: `Gateway communication failure: ${err.message}` });
+        const status = err?.status || err?.statusCode;
+        const hint =
+          status === 401
+            ? ' (Vercel Deployment Protection is likely ON — disable it in Project Settings, or use the Production domain)'
+            : '';
+        this.logs.push({
+          sender: 'system',
+          text: `Gateway communication failure: ${err.message}${hint}`,
+        });
         this.loading = false;
       }
     });
