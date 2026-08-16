@@ -1,42 +1,5 @@
 import type { VercelRequest, VercelResponse } from './vercel-shim';
-
-type GeminiResponse = {
-  candidates?: Array<{
-    content?: { parts?: Array<{ text?: string }> };
-  }>;
-  error?: { message?: string };
-};
-
-async function callGemini(prompt: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.startsWith('your_')) {
-    throw new Error('GEMINI_API_KEY is not configured in Vercel Environment Variables');
-  }
-
-  const model = process.env.LLM_MODEL || 'gemini-2.5-flash';
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/` +
-    `${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    }),
-  });
-
-  const data = (await response.json()) as GeminiResponse;
-  if (!response.ok) {
-    throw new Error(data.error?.message || `Gemini HTTP ${response.status}`);
-  }
-
-  const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-  if (!text) {
-    throw new Error('Gemini returned an empty response');
-  }
-  return text;
-}
+import { callGemini, modelLabel, readPrompt } from './lib/gemini';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -52,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
+    const prompt = readPrompt(req);
     if (!prompt) {
       return res.status(400).json({ success: false, detail: 'Missing prompt' });
     }
@@ -62,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true,
       pipeline_history: [
         prompt,
-        `[Serverless Agent / ${process.env.LLM_MODEL || 'gemini-2.5-flash'}]`,
+        `[Serverless Agent / ${modelLabel()}]`,
         finalOutput,
       ],
       final_output: finalOutput,

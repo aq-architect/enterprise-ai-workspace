@@ -10,9 +10,9 @@ export default function handler(_req: VercelRequest, res: VercelResponse) {
 
   return res.status(200).json({
     title: 'Enterprise AI Workspace — Serverless API',
-    mode: 'vercel-serverless-node',
+    mode: 'gemini-direct',
     note:
-      'Swagger UI (/docs) is available on local FastAPI agent-core only. On Vercel use these routes.',
+      'No FastAPI Swagger on Vercel. Set GEMINI_API_KEY in Vercel env, then POST prompts below.',
     endpoints: [
       {
         method: 'GET',
@@ -27,7 +27,7 @@ export default function handler(_req: VercelRequest, res: VercelResponse) {
       {
         method: 'POST',
         path: '/api/v1/gateway/dispatch',
-        description: 'Studio UI gateway → Gemini',
+        description: 'Studio UI gateway → Gemini (direct)',
         body: { prompt: 'string' },
       },
       {

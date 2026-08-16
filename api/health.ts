@@ -8,6 +8,7 @@ export default function handler(_req: VercelRequest, res: VercelResponse) {
     mode: 'vercel-serverless-node',
     routes: [
       'GET /api/health',
+      'GET /api/docs',
       'POST /api/v1/gateway/dispatch',
       'POST /api/v1/agent/chat',
     ],

@@ -1,8 +1,14 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
   "buildCommand": "npm run build:client",
   "outputDirectory": "dist/apps/client/browser",
   "framework": null,
+  "functions": {
+    "api/health.ts": { "memory": 256, "maxDuration": 10 },
+    "api/docs.ts": { "memory": 256, "maxDuration": 10 },
+    "api/gateway.ts": { "memory": 256, "maxDuration": 30 },
+    "api/agent.ts": { "memory": 256, "maxDuration": 30 }
+  },
   "rewrites": [
     { "source": "/api/docs", "destination": "/api/docs" },
     { "source": "/api/agent/docs", "destination": "/api/docs" },
