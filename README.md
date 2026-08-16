@@ -53,13 +53,16 @@ Python Agent Core (:8000) → Gemini
 | `agent-core` | FastAPI LangGraph (optional local) | http://localhost:8000 |
 | `libs/ai-cli` | Developer CLI | — |
 
-### API docs (Swagger / OpenAPI)
+### API docs
 
-| Service | Docs URL |
+| Surface | Docs URL |
 | --- | --- |
-| Gateway | http://localhost:3000/api/docs |
-| Agent Core | http://localhost:8000/docs |
-| Agent Core ReDoc | http://localhost:8000/redoc |
+| Vercel (serverless catalog) | `https://YOUR_DOMAIN/api/docs` (alias: `/api/agent/docs`) |
+| Local Nest gateway Swagger | http://localhost:3000/api/docs |
+| Local FastAPI agent Swagger | http://localhost:8000/docs |
+| Local FastAPI ReDoc | http://localhost:8000/redoc |
+
+On Vercel there is **no** FastAPI Swagger UI — only the JSON catalog above. Chat via `POST /api/v1/gateway/dispatch`.
 
 ---
 
@@ -108,20 +111,13 @@ Host the Angular UI + serverless Node gateway + serverless Python Gemini agent o
 
 5. Click **Deploy**
 
-### Troubleshoot `404 NOT_FOUND` on `/api/health`
+### Troubleshoot `404 NOT_FOUND` on `/api/*`
 
-Vercel was only publishing the Angular static export and skipping serverless functions. This repo’s `vercel.json` now **explicitly builds**:
+Common causes:
 
-- `@vercel/static-build` → Angular UI  
-- `@vercel/node` → `api/health.ts`, `api/gateway.ts`  
-- `@vercel/python` → `api/agent.py`  
-
-After pulling these changes:
-
-1. Commit + push `api/`, `vercel.json`, and `package.json` (`vercel-build` script)
-2. In Vercel → **Deployments** → **Redeploy** (or push to `main`)
-3. Confirm Project **Root Directory** is the repo root (not `apps/client`)
-4. Open `https://YOUR_DOMAIN/api/health` again
+1. **Wrong path** — `/api/agent/docs` is not FastAPI Swagger on Vercel. Use `/api/docs` (or wait for redeploy of the alias). Valid routes: `GET /api/health`, `GET /api/docs`, `POST /api/v1/gateway/dispatch`, `POST /api/v1/agent/chat`.
+2. **Framework preset** — set **Other** (not Angular) so `api/*.ts` serverless functions deploy. Build: `npm run build:client`, Output: `dist/apps/client/browser`, Root: repo root.
+3. After fixing, **Redeploy** and smoke-test `/api/health`.
 
 ### Troubleshoot `401` on `/api/v1/gateway/dispatch`
 
@@ -158,7 +154,7 @@ No Nest/FastAPI processes required for this free host path. Keep `apps/gateway-s
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (24 recommended for CI/Vercel)
 - npm 10+
 - Python 3.11+ (for local `agent-core` only)
 - Git

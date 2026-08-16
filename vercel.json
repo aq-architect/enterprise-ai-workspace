@@ -1,23 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/apps/client/browser"
-      }
-    },
-    { "src": "api/health.ts", "use": "@vercel/node" },
-    { "src": "api/gateway.ts", "use": "@vercel/node" },
-    { "src": "api/agent.py", "use": "@vercel/python" }
-  ],
-  "routes": [
-    { "src": "/api/health", "dest": "/api/health.ts" },
-    { "src": "/api/v1/agent/chat", "dest": "/api/agent.py" },
-    { "src": "/api/v1/gateway/dispatch", "dest": "/api/gateway.ts" },
-    { "src": "/api/v1/gateway/agent/dispatch", "dest": "/api/gateway.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build:client",
+  "outputDirectory": "dist/apps/client/browser",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/docs", "destination": "/api/docs" },
+    { "source": "/api/agent/docs", "destination": "/api/docs" },
+    { "source": "/api/v1/agent/chat", "destination": "/api/agent" },
+    { "source": "/api/v1/gateway/dispatch", "destination": "/api/gateway" },
+    { "source": "/api/v1/gateway/agent/dispatch", "destination": "/api/gateway" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
