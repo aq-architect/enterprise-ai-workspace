@@ -1,11 +1,15 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './vercel-shim';
 
-/** Public ping — use this to verify the deployment is reachable without auth. */
 export default function handler(_req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   return res.status(200).json({
     status: 'ok',
     service: 'enterprise-ai-workspace',
-    mode: 'vercel-serverless',
+    mode: 'vercel-serverless-node',
+    routes: [
+      'GET /api/health',
+      'POST /api/v1/gateway/dispatch',
+      'POST /api/v1/agent/chat',
+    ],
   });
 }

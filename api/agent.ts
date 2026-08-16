@@ -7,12 +7,6 @@ type GeminiResponse = {
   error?: { message?: string };
 };
 
-function setCors(res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
-
 async function callGemini(prompt: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey.startsWith('your_')) {
@@ -45,43 +39,36 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCors(res);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, detail: 'Method not allowed' });
   }
 
   try {
     const prompt = typeof req.body?.prompt === 'string' ? req.body.prompt.trim() : '';
     if (!prompt) {
-      return res.status(400).json({ error: 'Missing parameter: prompt' });
+      return res.status(400).json({ success: false, detail: 'Missing prompt' });
     }
 
     const finalOutput = await callGemini(prompt);
-
     return res.status(200).json({
-      source: '@aq-architect/serverless-gateway',
-      gatewayStatus: 'synchronized',
-      data: {
-        success: true,
-        pipeline_history: [
-          prompt,
-          `[Serverless Gateway / ${process.env.LLM_MODEL || 'gemini-2.5-flash'}]`,
-          finalOutput,
-        ],
-        final_output: finalOutput,
-      },
+      success: true,
+      pipeline_history: [
+        prompt,
+        `[Serverless Agent / ${process.env.LLM_MODEL || 'gemini-2.5-flash'}]`,
+        finalOutput,
+      ],
+      final_output: finalOutput,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    return res.status(500).json({
-      source: '@aq-architect/serverless-gateway',
-      gatewayStatus: 'error',
-      error: message,
-    });
+    return res.status(500).json({ success: false, detail: message });
   }
 }

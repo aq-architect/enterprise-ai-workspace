@@ -13,8 +13,8 @@
     "build:gateway": "nx build gateway-server",
     "build:ai-cli": "nx build ai-cli",
     "publish:ai-cli": "nx build ai-cli && npm publish ./dist/libs/ai-cli",
-    "vercel:dev": "vercel dev",
-    "vercel:deploy": "vercel --prod",
+    "vercel:dev": "npx vercel@41 dev",
+    "vercel:deploy": "npx vercel@41 --prod",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
@@ -59,9 +59,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/passport-jwt": "^4.0.1",
-    "@vercel/node": "^5.0.0",
     "nx": "^20.0.0",
-    "typescript": "~5.4.2",
-    "vercel": "^41.0.0"
+    "typescript": "~5.4.2"
   }
 }
