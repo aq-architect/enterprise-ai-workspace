@@ -1,6 +1,6 @@
 from typing import Annotated, Sequence, TypedDict
 
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 
@@ -13,40 +13,108 @@ class AgentState(TypedDict):
 
 
 def get_llm() -> ChatOpenAI:
+    if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("your_"):
+        raise ValueError(
+            "OPENAI_API_KEY is missing or still a placeholder in agent-core/.env"
+        )
     return ChatOpenAI(
-        model="gpt-4o",
-        temperature=0,
-        api_key=settings.OPENAI_API_KEY or None,
+        model="gpt-4o-mini",
+        temperature=0.2,
+        api_key=settings.OPENAI_API_KEY,
     )
 
 
-def supervisor_router(state: AgentState):
-    messages = state["messages"]
-    last_message = messages[-1].content
+def _latest_user_text(state: AgentState) -> str:
+    for message in reversed(state["messages"]):
+        if isinstance(message, HumanMessage) or message.type == "human":
+            return str(message.content)
+    return str(state["messages"][-1].content)
 
-    if "analyze" in last_message.lower() or "report" in last_message.lower():
+
+def supervisor_router(state: AgentState):
+    prompt = _latest_user_text(state).lower()
+    analytics_keywords = (
+        "analyze",
+        "analysis",
+        "report",
+        "metrics",
+        "statistics",
+        "trend",
+        "compute",
+    )
+    if any(keyword in prompt for keyword in analytics_keywords):
         return {"next_step": "analytics_agent"}
     return {"next_step": "rag_agent"}
 
 
-def rag_agent_node(state: AgentState):
-    return {
-        "messages": [
-            AIMessage(
-                content="[RAG Agent]: Querying vector logs for enterprise data variables..."
-            )
+def _answer_with_rag(query: str) -> str:
+    """Try Pinecone RAG first; fall back to direct LLM if retrieval is unavailable."""
+    try:
+        from app.service import rag_service
+
+        if settings.PINECONE_API_KEY and not settings.PINECONE_API_KEY.startswith(
+            "your_"
+        ):
+            context = rag_service.retrieve(query)
+            if context and context.strip():
+                llm = get_llm()
+                response = llm.invoke(
+                    [
+                        SystemMessage(
+                            content=(
+                                "You are the enterprise RAG agent. Answer using the "
+                                "retrieved context when relevant. If context is weak, "
+                                "say what is missing and still help with general knowledge."
+                            )
+                        ),
+                        HumanMessage(
+                            content=f"Context:\n{context}\n\nUser question:\n{query}"
+                        ),
+                    ]
+                )
+                return f"[RAG Agent]: {response.content}"
+    except Exception as exc:
+        # Fall through to LLM-only answer when vector DB is not ready.
+        fallback_note = f"(vector retrieval unavailable: {exc})"
+    else:
+        fallback_note = "(no indexed context found; answering with model knowledge)"
+
+    llm = get_llm()
+    response = llm.invoke(
+        [
+            SystemMessage(
+                content=(
+                    "You are the enterprise RAG agent. Provide a clear, helpful answer. "
+                    f"Note for the user: {fallback_note}"
+                )
+            ),
+            HumanMessage(content=query),
         ]
-    }
+    )
+    return f"[RAG Agent]: {response.content}"
+
+
+def rag_agent_node(state: AgentState):
+    query = _latest_user_text(state)
+    answer = _answer_with_rag(query)
+    return {"messages": [AIMessage(content=answer)]}
 
 
 def analytics_agent_node(state: AgentState):
-    return {
-        "messages": [
-            AIMessage(
-                content="[Analytics Agent]: Computing high-volume matrix schemas and log states."
-            )
+    query = _latest_user_text(state)
+    llm = get_llm()
+    response = llm.invoke(
+        [
+            SystemMessage(
+                content=(
+                    "You are the enterprise analytics agent. Provide structured analysis, "
+                    "assumptions, and actionable insights."
+                )
+            ),
+            HumanMessage(content=query),
         ]
-    }
+    )
+    return {"messages": [AIMessage(content=f"[Analytics Agent]: {response.content}")]}
 
 
 workflow = StateGraph(AgentState)

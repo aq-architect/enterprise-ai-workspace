@@ -18,7 +18,7 @@ class RAGService:
 
     def _configure_llama_index(self) -> None:
         LlamaSettings.llm = OpenAI(
-            model="gpt-4o-mini",
+            model=self.settings.LLM_MODEL,
             api_key=self.settings.OPENAI_API_KEY,
         )
         LlamaSettings.embed_model = OpenAIEmbedding(
@@ -29,7 +29,7 @@ class RAGService:
     def _build_query_engine(self) -> BaseQueryEngine:
         self._configure_llama_index()
         pinecone_client = Pinecone(api_key=self.settings.PINECONE_API_KEY)
-        index = pinecone_client.Index("agent-core")
+        index = pinecone_client.Index(self.settings.PINECONE_INDEX_NAME)
         vector_store = PineconeVectorStore(pinecone_index=index)
         vector_index = VectorStoreIndex.from_vector_store(vector_store)
         return vector_index.as_query_engine()

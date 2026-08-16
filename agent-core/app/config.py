@@ -1,13 +1,31 @@
 import os
-from dotenv import load_dotenv
-from pydantic_settings import BaseSettings
+from functools import lru_cache
 
-load_dotenv()
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+load_dotenv(override=True)
+
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
-    PINECONE_ENV: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
-    PROJECT_NAME: str = "Enterprise AI Agent Core"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-settings = Settings()
+    OPENAI_API_KEY: str = ""
+    PINECONE_API_KEY: str = ""
+    PINECONE_ENV: str = "us-east-1"
+    PINECONE_INDEX_NAME: str = "agent-core"
+    PINECONE_HOST: str = ""
+    PROJECT_NAME: str = "Enterprise AI Agent Core"
+    LLM_MODEL: str = "gpt-4o-mini"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()
