@@ -13,10 +13,14 @@ export interface GatewayResponse {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AiGatewayService {
-  private readonly gatewayUrl = 'http://localhost:3000/api/v1/gateway/agent/dispatch';
+  /**
+   * Same-origin serverless route on Vercel.
+   * Local: use `vercel dev` or point to a running Nest gateway if preferred.
+   */
+  private readonly gatewayUrl = '/api/v1/gateway/dispatch';
 
   constructor(private http: HttpClient) {}
 

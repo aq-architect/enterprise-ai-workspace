@@ -1,7 +1,7 @@
 {
   "name": "ai-cli-agent",
-  "version": "1.0.0",
-  "description": "Developer CLI and shared toolkit for the Enterprise AI Workspace (Angular studio, NestJS gateway, LangGraph agent-core). Includes architecture docs, gateway helpers, and an extensible Commander-based CLI.",
+  "version": "1.0.2",
+  "description": "Developer CLI and shared toolkit for the Enterprise AI Workspace (Angular studio, NestJS gateway, LangGraph agent-core). Local ping/gateway helpers only — LLM keys stay in agent-core, not in this CLI.",
   "license": "MIT",
   "main": "./index.js",
   "types": "./index.d.ts",

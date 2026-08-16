@@ -1,62 +1,40 @@
-"""Advanced RAG pipeline using LlamaIndex and Pinecone."""
-
-from llama_index.core import Settings as LlamaSettings
-from llama_index.core import VectorStoreIndex
-from llama_index.core.query_engine import BaseQueryEngine
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.openai import OpenAI
-from llama_index.vector_stores.pinecone import PineconeVectorStore
-from pinecone import Pinecone
+"""RAG helpers. Chat answers use Gemini via app.llm; vector retrieve is optional."""
 
 from app.config import settings
 
 
 class RAGService:
-    def __init__(self) -> None:
-        self.settings = settings
-        self._query_engine: BaseQueryEngine | None = None
+    """
+    Optional Pinecone retrieval.
 
-    def _configure_llama_index(self) -> None:
-        LlamaSettings.llm = OpenAI(
-            model=self.settings.LLM_MODEL,
-            api_key=self.settings.OPENAI_API_KEY,
-        )
-        LlamaSettings.embed_model = OpenAIEmbedding(
-            model="text-embedding-3-small",
-            api_key=self.settings.OPENAI_API_KEY,
-        )
-
-    def _build_query_engine(self) -> BaseQueryEngine:
-        self._configure_llama_index()
-        pinecone_client = Pinecone(api_key=self.settings.PINECONE_API_KEY)
-        index = pinecone_client.Index(self.settings.PINECONE_INDEX_NAME)
-        vector_store = PineconeVectorStore(pinecone_index=index)
-        vector_index = VectorStoreIndex.from_vector_store(vector_store)
-        return vector_index.as_query_engine()
-
-    @property
-    def query_engine(self) -> BaseQueryEngine:
-        if self._query_engine is None:
-            self._query_engine = self._build_query_engine()
-        return self._query_engine
+    Generation always happens through get_llm() (Gemini by default) in graph.py,
+    so missing vector embeddings will not block chat.
+    """
 
     def retrieve(self, query: str) -> str:
-        response = self.query_engine.query(query)
-        source_nodes = getattr(response, "source_nodes", [])
-        if not source_nodes:
-            return str(response)
-        return "\n\n".join(node.get_content() for node in source_nodes)
+        if not settings.PINECONE_API_KEY or settings.PINECONE_API_KEY.startswith(
+            "your_"
+        ):
+            return ""
 
-    def generate(self, query: str, context: str) -> str:
-        prompt = (
-            "Answer the user query using only the provided context.\n\n"
-            f"Context:\n{context}\n\nQuery:\n{query}"
-        )
-        response = self.query_engine.query(prompt)
-        return str(response)
+        # Soft dependency path — if LlamaIndex/Pinecone stack is not configured
+        # for Gemini embeddings yet, callers fall back to pure LLM answers.
+        try:
+            from llama_index.core import VectorStoreIndex
+            from llama_index.vector_stores.pinecone import PineconeVectorStore
+            from pinecone import Pinecone
 
-    def query(self, query: str) -> str:
-        return str(self.query_engine.query(query))
+            pinecone_client = Pinecone(api_key=settings.PINECONE_API_KEY)
+            index = pinecone_client.Index(settings.PINECONE_INDEX_NAME)
+            vector_store = PineconeVectorStore(pinecone_index=index)
+            vector_index = VectorStoreIndex.from_vector_store(vector_store)
+            response = vector_index.as_query_engine().query(query)
+            source_nodes = getattr(response, "source_nodes", [])
+            if not source_nodes:
+                return str(response)
+            return "\n\n".join(node.get_content() for node in source_nodes)
+        except Exception:
+            return ""
 
 
 rag_service = RAGService()

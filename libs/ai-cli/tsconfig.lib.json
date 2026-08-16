@@ -6,7 +6,8 @@
     "outDir": "../../dist/libs/ai-cli",
     "declaration": true,
     "types": ["node"],
-    "sourceMap": true
+    "sourceMap": true,
+    "importHelpers": false
   },
   "include": ["src/**/*.ts"],
   "exclude": ["**/*.spec.ts"]

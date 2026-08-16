@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build:client",
+  "outputDirectory": "dist/apps/client/browser",
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/v1/agent/chat", "destination": "/api/agent" },
+    { "source": "/api/v1/gateway/dispatch", "destination": "/api/gateway" },
+    { "source": "/api/v1/gateway/agent/dispatch", "destination": "/api/gateway" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

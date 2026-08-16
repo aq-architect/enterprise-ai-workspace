@@ -40,7 +40,8 @@ It sits beside the full monorepo architecture (UI → Gateway → Agent Core) an
 └────────────────────┘
           │
           ▼
-   OpenAI / Pinecone (optional vector retrieval)
+   Google Gemini (GEMINI_API_KEY)
+   + optional Pinecone retrieval
 
 ┌────────────────────┐
 │  ai-cli-agent      │  This npm package (libs/ai-cli)
@@ -67,7 +68,7 @@ enterprise-ai-workspace/
 1. User enters a prompt in the Angular **agent terminal** (or calls the gateway API).
 2. **Gateway** validates the request and proxies to **agent-core**.
 3. **LangGraph** routes to a RAG or analytics agent node.
-4. The agent answers via LLM (and optionally Pinecone retrieval).
+4. The agent answers via **Google Gemini** (server-side `GEMINI_API_KEY`) and optionally Pinecone retrieval.
 5. Gateway returns a wrapped response; events can be published to **Kafka**.
 
 ### Default local endpoints
@@ -148,9 +149,11 @@ program.parse(process.argv);
 ## Related stack components
 
 - **Gateway** — NestJS proxy with Swagger, JWT strategy, Kafka producer/consumer
-- **Agent Core** — FastAPI + LangGraph supervisor routing (`rag_agent` / `analytics_agent`)
+- **Agent Core** — FastAPI + LangGraph + **Gemini** (`rag_agent` / `analytics_agent`)
 - **Client** — Angular standalone UI with reactive `AiGatewayService` (RxJS)
 - **Docker** — `docker compose up --build` runs client, gateway, agent-core, MongoDB, and Kafka
+
+> **API keys:** End users and this npm CLI do **not** configure Gemini keys. Keys belong in the hosted `agent-core/.env` only.
 
 Clone the full workspace for local development of those services. This package is the lightweight CLI surface published to npm.
 

@@ -1,27 +1,15 @@
 from typing import Annotated, Sequence, TypedDict
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 
 from app.config import settings
+from app.llm import get_llm
 
 
 class AgentState(TypedDict):
     messages: Annotated[Sequence[BaseMessage], lambda x, y: x + y]
     next_step: str
-
-
-def get_llm() -> ChatOpenAI:
-    if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("your_"):
-        raise ValueError(
-            "OPENAI_API_KEY is missing or still a placeholder in agent-core/.env"
-        )
-    return ChatOpenAI(
-        model="gpt-4o-mini",
-        temperature=0.2,
-        api_key=settings.OPENAI_API_KEY,
-    )
 
 
 def _latest_user_text(state: AgentState) -> str:
@@ -48,7 +36,7 @@ def supervisor_router(state: AgentState):
 
 
 def _answer_with_rag(query: str) -> str:
-    """Try Pinecone RAG first; fall back to direct LLM if retrieval is unavailable."""
+    """Try Pinecone RAG first; fall back to direct Gemini if retrieval is unavailable."""
     try:
         from app.service import rag_service
 
@@ -74,7 +62,6 @@ def _answer_with_rag(query: str) -> str:
                 )
                 return f"[RAG Agent]: {response.content}"
     except Exception as exc:
-        # Fall through to LLM-only answer when vector DB is not ready.
         fallback_note = f"(vector retrieval unavailable: {exc})"
     else:
         fallback_note = "(no indexed context found; answering with model knowledge)"

@@ -1,6 +1,6 @@
 # Enterprise AI Workspace
 
-Nx monorepo for an enterprise multi-agent stack: Angular studio UI, NestJS API gateway, shared developer CLI, and a Python FastAPI / LangGraph agent core.
+Nx monorepo for an enterprise multi-agent stack: Angular studio UI, NestJS/Docker option for full local stack, and a **100% free Vercel serverless** path (Angular + Node gateway + Python Gemini) for portfolio hosting without paid container plans.
 
 ## Architecture
 
@@ -8,66 +8,139 @@ Nx monorepo for an enterprise multi-agent stack: Angular studio UI, NestJS API g
 enterprise-ai-workspace/
 ├── apps/
 │   ├── client/             # Angular 17+ Studio UI
-│   └── gateway-server/     # NestJS API Gateway (JWT, Kafka, proxy)
+│   └── gateway-server/     # NestJS gateway (local/Docker)
+├── api/                    # Vercel serverless backends (free host)
+│   ├── gateway.ts          # Node proxy → agent
+│   ├── agent.py            # Python Gemini worker
+│   └── requirements.txt
 ├── libs/
-│   └── ai-cli/             # Shared developer CLI library
-├── agent-core/             # Python FastAPI + LangGraph engine
-├── docker-compose.yml      # Full-stack Docker orchestration
-├── package.json            # Single Node.js dependency root
-├── nx.json
-├── workspace.json
-└── tsconfig.base.json
+│   └── ai-cli/             # npm: ai-cli-agent
+├── agent-core/             # Full FastAPI + LangGraph (local/Docker)
+├── vercel.json             # Vercel build + routes
+├── docker-compose.yml
+└── package.json
 ```
 
-### Docker layout
-
-| File | Purpose |
-| --- | --- |
-| `docker-compose.yml` | Runs client, gateway, agent-core, MongoDB, Kafka |
-| `agent-core/Dockerfile` | Python FastAPI image |
-| `apps/gateway-server/Dockerfile` | NestJS gateway image |
-| `apps/client/Dockerfile` | Angular + nginx image |
-
-### Request flow
+### Free Vercel serverless flow (recommended for portfolio)
 
 ```
-Angular Client  →  NestJS Gateway (:3000)  →  Python Agent Core (:8000)
-                         ↓
-                      Kafka events
+Browser (same Vercel domain)
+      ↓  POST /api/v1/gateway/dispatch
+api/gateway.ts  (Node serverless)
+      ↓  POST /api/v1/agent/chat
+api/agent.py    (Python serverless → Gemini)
+      ↓
+JSON answer → Angular terminal
+```
+
+No always-on containers. Functions run on demand. Set `GEMINI_API_KEY` in the Vercel project env.
+
+### Local / Docker flow (full Nest + FastAPI)
+
+```
+Angular Client (:4200)
+      ↓
+NestJS Gateway (:3000)
+      ↓
+Python Agent Core (:8000) → Gemini
 ```
 
 | Layer | Role | Default URL |
 | --- | --- | --- |
-| `apps/client` | Prompt console / studio UI | `http://localhost:4200` |
-| `apps/gateway-server` | Auth, proxy, event publishing | `http://localhost:3000` |
-| `agent-core` | LangGraph agent + RAG pipeline | `http://localhost:8000` |
-| `libs/ai-cli` | Shared developer CLI utilities | — |
-
-### Key endpoints
-
-| Method | Path | Service |
-| --- | --- | --- |
-| `POST` | `/api/v1/gateway/agent/dispatch` | Gateway → Agent Core proxy |
-| `POST` | `/api/v1/agent/chat` | Agent Core chat entry |
-| `GET` | `/` | Agent Core health/status |
+| `apps/client` | Studio UI | http://localhost:4200 (local) or Vercel domain |
+| `api/*` | Free serverless gateway + agent | `/api/v1/gateway/dispatch` |
+| `apps/gateway-server` | NestJS (optional local) | http://localhost:3000 |
+| `agent-core` | FastAPI LangGraph (optional local) | http://localhost:8000 |
+| `libs/ai-cli` | Developer CLI | — |
 
 ### API docs (Swagger / OpenAPI)
 
-| Service | Docs URL | OpenAPI JSON |
+| Service | Docs URL |
+| --- | --- |
+| Gateway | http://localhost:3000/api/docs |
+| Agent Core | http://localhost:8000/docs |
+| Agent Core ReDoc | http://localhost:8000/redoc |
+
+---
+
+## Who installs what?
+
+| Audience | Installs | Adds API keys? |
 | --- | --- | --- |
-| Gateway (NestJS) | http://localhost:3000/api/docs | http://localhost:3000/api/docs-json |
-| Agent Core (FastAPI) | http://localhost:8000/docs | http://localhost:8000/openapi.json |
-| Agent Core ReDoc | http://localhost:8000/redoc | — |
+| **End user** | Nothing — opens the Studio URL | No |
+| **Platform admin / you** | This repo (Docker or local) | Yes — `GEMINI_API_KEY` in `agent-core/.env` |
+| **Developer (CLI helper)** | `npm i -g ai-cli-agent` | No (CLI does not call Gemini) |
+
+LLM keys stay on the **server** (`agent-core`). End users and the npm CLI never paste keys.
+
+---
+
+## Deploy free on Vercel (no credit card)
+
+Host the Angular UI + serverless Node gateway + serverless Python Gemini agent on one domain.
+
+### 1. Prerequisites
+
+- GitHub repo pushed
+- Free [Vercel](https://vercel.com) account
+- Gemini key from [Google AI Studio](https://aistudio.google.com/apikey)
+
+### 2. Project files used
+
+| File | Purpose |
+| --- | --- |
+| `vercel.json` | Build Angular + rewrite API routes |
+| `api/gateway.ts` | Serverless Node proxy |
+| `api/agent.py` | Serverless Python → Gemini |
+| `api/requirements.txt` | Python deps for the agent function |
+
+### 3. Deploy
+
+1. Push code to GitHub  
+2. Vercel → **Add New** → **Project** → import repo  
+3. Framework preset: leave default / Other (reads `vercel.json`)  
+4. Environment variables:
+
+| Key | Value |
+| --- | --- |
+| `GEMINI_API_KEY` | your Google AI Studio key |
+| `LLM_MODEL` | `gemini-2.5-flash` (optional) |
+
+5. Click **Deploy**
+
+### 4. Local serverless preview
+
+```powershell
+npm install
+npx vercel login
+npx vercel env pull   # optional
+npm run vercel:dev
+```
+
+Studio + APIs share one origin. The Angular client calls `/api/v1/gateway/dispatch` (same domain).
+
+### 5. End-user flow on Vercel
+
+1. Open your `*.vercel.app` URL  
+2. Type a prompt in the terminal UI  
+3. Gateway function → agent function → Gemini → answer  
+
+No Nest/FastAPI processes required for this free host path. Keep `apps/gateway-server` and `agent-core` for rich local/Docker development.
+
+---
 
 ## Prerequisites
 
-- **Node.js** 20+
-- **npm** 10+
-- **Python** 3.11+
-- **Git**
-- Optional: MongoDB (`localhost:27017`), Kafka (`localhost:9092`), OpenAI + Pinecone API keys
+- Node.js 20+
+- npm 10+
+- Python 3.11+ (for local `agent-core` only)
+- Git
+- Gemini API key
+- Optional: MongoDB, Kafka, Pinecone, Docker
 
-## Quick start
+---
+
+## Quick start (local)
 
 ### 1. Clone and install Node workspace
 
@@ -79,61 +152,72 @@ npm install
 
 ### 2. Configure environment files
 
-Copy the example env files and fill in real values:
-
-```bash
-# Windows PowerShell
+```powershell
 Copy-Item agent-core\.env.example agent-core\.env
 Copy-Item apps\gateway-server\.env.example apps\gateway-server\.env
-
-# macOS / Linux
-cp agent-core/.env.example agent-core/.env
-cp apps/gateway-server/.env.example apps/gateway-server/.env
 ```
 
-Never commit `.env` files. Only `.env.example` files are tracked.
+Edit `agent-core/.env`:
+
+```env
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-2.5-flash
+GEMINI_API_KEY=your_real_gemini_key
+```
+
+Never commit `.env` files.
 
 ### 3. Start Python Agent Core
 
-```bash
+```powershell
 cd agent-core
 python -m venv .venv
-
-# Windows
 .\.venv\Scripts\Activate.ps1
-
-# macOS / Linux
-source .venv/bin/activate
-
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 ### 4. Start NestJS Gateway
 
-From the workspace root (another terminal):
-
-```bash
+```powershell
 npm run start:gateway
-# or
-npx nx serve gateway-server
 ```
-
-Gateway listens on `http://localhost:3000`.
 
 ### 5. Start Angular Client
 
-From the workspace root (another terminal):
-
-```bash
+```powershell
 npm run start:client
-# or
-npx nx serve client
 ```
 
-Client listens on `http://localhost:4200` and posts prompts to:
+Open http://localhost:4200 and submit a prompt.
 
-`http://localhost:3000/api/v1/gateway/agent/dispatch`
+---
+
+## LLM configuration (Gemini)
+
+Agent-core uses `app/llm.py` with Google Gemini.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `LLM_PROVIDER` | `gemini` | LLM provider |
+| `LLM_MODEL` | `gemini-2.5-flash` | **Any** Gemini model id — change without code edits |
+| `GEMINI_API_KEY` | — | Required Google Gemini API key |
+
+### Switch Gemini models freely
+
+```env
+LLM_MODEL=gemini-2.5-flash
+# or
+LLM_MODEL=gemini-2.5-flash-lite
+# or
+LLM_MODEL=gemini-2.5-pro
+# or
+LLM_MODEL=gemini-flash-latest
+```
+
+Restart / rely on `--reload` after changing `.env`.
+
+---
 
 ## Environment variables
 
@@ -141,31 +225,85 @@ Client listens on `http://localhost:4200` and posts prompts to:
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `APP_ENV` | No | Runtime environment (`development`, `production`) |
-| `DEBUG` | No | Enable debug mode (`true` / `false`) |
-| `OPENAI_API_KEY` | Yes | OpenAI API key for LLM / embeddings |
-| `PINECONE_API_KEY` | Yes | Pinecone vector DB API key |
-| `PINECONE_ENVIRONMENT` | No | Pinecone region / environment (default `us-east-1`) |
+| `APP_ENV` | No | `development` / `production` |
+| `DEBUG` | No | Debug flag |
+| `LLM_PROVIDER` | No | Default `gemini` |
+| `LLM_MODEL` | No | Any Gemini model id (default `gemini-2.5-flash`) |
+| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `PINECONE_API_KEY` | No | Optional vector retrieval |
+| `PINECONE_ENVIRONMENT` | No | Default `us-east-1` |
+| `PINECONE_INDEX_NAME` | No | Default `agent-core` |
+| `PINECONE_HOST` | No | Optional Pinecone host |
 
 ### `apps/gateway-server/.env`
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `PORT` | No | Gateway HTTP port (default `3000`) |
+| `PORT` | No | Default `3000` |
 | `NODE_ENV` | No | Node environment |
-| `MONGO_URI` | No | MongoDB connection string |
-| `AI_CORE_URL` | Yes | Full agent-core chat URL |
-| `KAFKA_BROKERS` | No | Comma-separated Kafka brokers |
-| `JWT_SECRET` | Yes | Secret used to sign/verify JWTs |
-| `JWT_EXPIRES_IN` | No | Token lifetime (e.g. `1h`) |
+| `MONGO_URI` | No | Mongo connection string |
+| `AI_CORE_URL` | Yes | e.g. `http://localhost:8000/api/v1/agent/chat` |
+| `KAFKA_BROKERS` | No | Kafka brokers |
+| `JWT_SECRET` | Yes | JWT signing secret |
+| `JWT_EXPIRES_IN` | No | e.g. `1h` |
 | `KAFKA_CLIENT_ID` | No | Kafka client id |
-| `KAFKA_GROUP_ID` | No | Kafka consumer group |
-| `KAFKA_AI_EVENTS_TOPIC` | No | Topic for AI gateway events |
+| `KAFKA_GROUP_ID` | No | Consumer group |
+| `KAFKA_AI_EVENTS_TOPIC` | No | Events topic |
 
-See:
+Templates: [`agent-core/.env.example`](agent-core/.env.example), [`apps/gateway-server/.env.example`](apps/gateway-server/.env.example)
 
-- [`agent-core/.env.example`](agent-core/.env.example)
-- [`apps/gateway-server/.env.example`](apps/gateway-server/.env.example)
+---
+
+## Docker (full stack)
+
+```powershell
+Copy-Item agent-core\.env.example agent-core\.env
+Copy-Item apps\gateway-server\.env.example apps\gateway-server\.env
+# set GEMINI_API_KEY in agent-core\.env
+
+docker compose up --build -d
+# or: npm run docker:up
+```
+
+| Service | URL |
+| --- | --- |
+| Client UI | http://localhost:4200 |
+| Gateway Swagger | http://localhost:3000/api/docs |
+| Agent Core Swagger | http://localhost:8000/docs |
+
+```powershell
+npm run docker:ps
+npm run docker:logs
+npm run docker:down
+```
+
+Internal networking:
+
+- Gateway → `http://agent-core:8000/api/v1/agent/chat`
+- Gateway → `mongodb://mongo:27017/enterprise-ai`
+- Gateway → `kafka:29092`
+
+---
+
+## npm package: `ai-cli-agent`
+
+Developer helper only (not the end-user product):
+
+```bash
+npm install -g ai-cli-agent
+ai-cli ping
+ai-cli gateway-url
+```
+
+Does **not** require `GEMINI_API_KEY`. See [`libs/ai-cli/README.md`](libs/ai-cli/README.md).
+
+Publish from repo root:
+
+```bash
+npm run publish:ai-cli
+```
+
+---
 
 ## Nx commands
 
@@ -176,106 +314,63 @@ See:
 | `npm run build` | Build all Node projects |
 | `npm run build:client` | Build Angular app |
 | `npm run build:gateway` | Build NestJS gateway |
-| `npm run build:ai-cli` | Build shared CLI library |
-| `npx nx graph` | Visualize project graph |
+| `npm run build:ai-cli` | Build CLI library |
+| `npx nx graph` | Project graph |
+
+---
 
 ## Project details
 
-### `apps/client` (Angular 17+)
+### `apps/client`
 
-- Standalone components
-- `AgentTerminalComponent` for real-time prompt/console UX
-- `AiGatewayService` RxJS HTTP client to the Nest gateway
+- Angular 17+ standalone components
+- Agent terminal UI
+- `AiGatewayService` → gateway dispatch endpoint
 
-### `apps/gateway-server` (NestJS)
+### `apps/gateway-server`
 
-- Domain modules: `auth`, `ai-gateway`, `events`
-- JWT strategy + guard
-- Proxies validated prompts to Python agent-core
-- Kafka producer/consumer for gateway events (degrades gracefully if Kafka is down)
+- Modules: `auth`, `ai-gateway`, `events`
+- Swagger at `/api/docs`
+- Proxies prompts to agent-core
+- Kafka events (graceful if Kafka is down)
 
-### `agent-core` (Python)
+### `agent-core`
 
-- FastAPI entrypoint (`app/main.py`)
-- LangGraph workflow (`app/graph.py`)
-- RAG / LlamaIndex + Pinecone service (`app/service.py`)
-- Settings via `python-dotenv` + pydantic (`app/config.py`)
+- FastAPI + LangGraph (`app/graph.py`)
+- Gemini LLM factory (`app/llm.py`) with any `LLM_MODEL`
+- Optional Pinecone retrieve (`app/service.py`)
+- Settings (`app/config.py`)
 
 ### `libs/ai-cli`
 
-- Shared Commander-based CLI helpers
-- Path alias: `@enterprise-ai/ai-cli`
+- Commander CLI published as `ai-cli-agent`
 
-## Docker (all services)
+---
 
-Prerequisites: [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Compose v2.
+## Local checklist
 
-1. Ensure env files exist and contain real keys:
-
-```powershell
-Copy-Item agent-core\.env.example agent-core\.env
-Copy-Item apps\gateway-server\.env.example apps\gateway-server\.env
-```
-
-2. Build and start the full stack:
-
-```powershell
-docker compose up --build -d
-# or
-npm run docker:up
-```
-
-3. Open:
-
-| Service | URL |
-| --- | --- |
-| Client UI | http://localhost:4200 |
-| Gateway Swagger | http://localhost:3000/api/docs |
-| Agent Core Swagger | http://localhost:8000/docs |
-
-4. Useful commands:
-
-```powershell
-npm run docker:ps      # container status
-npm run docker:logs    # follow logs
-npm run docker:down    # stop stack
-docker compose up --build agent-core gateway-server   # subset only
-```
-
-Compose wires internal networking automatically:
-
-- Gateway → `http://agent-core:8000/api/v1/agent/chat`
-- Gateway → `mongodb://mongo:27017/enterprise-ai`
-- Gateway → `kafka:29092`
-
-## Local development checklist
-
-1. Copy both `.env.example` files to `.env`
-2. Set OpenAI / Pinecone keys in `agent-core/.env`
-3. Set a strong `JWT_SECRET` in `apps/gateway-server/.env`
+1. Copy `.env.example` → `.env` for agent-core and gateway
+2. Set `GEMINI_API_KEY` (+ `LLM_PROVIDER=gemini`, `LLM_MODEL=...`)
+3. Set `JWT_SECRET` on gateway
 4. Confirm `AI_CORE_URL=http://localhost:8000/api/v1/agent/chat`
-5. Start agent-core → gateway → client (in that order)
-6. Open the studio UI and submit a prompt
+5. Start agent-core → gateway → client
+6. Open http://localhost:4200 and chat
+
+---
 
 ## CI
 
-GitHub Actions workflows:
+- [`.github/workflows/ci-pipeline.yml`](.github/workflows/ci-pipeline.yml) — Node/Python builds
+- [`.github/workflows/docker.yml`](.github/workflows/docker.yml) — Compose build
 
-- [`.github/workflows/ci-pipeline.yml`](.github/workflows/ci-pipeline.yml) — Node/Python build checks
-- [`.github/workflows/docker.yml`](.github/workflows/docker.yml) — Compose validate + image builds
-
-Jobs (app CI):
-
-1. **gateway-validation** — `npm ci` + `nx build gateway-server`
-2. **ai-core-validation** — install Python deps + flake8 syntax checks
-3. **client-validation** — `npm ci` + `nx build client`
+---
 
 ## Security notes
 
-- `.env` files are gitignored
-- Do not commit API keys, JWT secrets, or connection strings
-- Rotate any secrets that were previously committed or shared
-- Prefer short-lived tokens and least-privilege cloud keys in production
+- `.env` is gitignored; commit only `.env.example`
+- Keep `GEMINI_API_KEY` on the server only
+- Rotate keys if they were ever committed or pasted into chat
+- Prefer least-privilege cloud keys in production
 
 ## License
 
